@@ -10,7 +10,6 @@ FIELDS_TO_REMOVE = {
     "dependents",
     "readme_content",
     "dependencies",
-    "zig_minimum_version",
     "size",
     "tags_url",
     "default_branch",
