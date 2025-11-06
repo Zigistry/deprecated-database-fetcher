@@ -1,3 +1,14 @@
+Additional Permission Requirement:
+
+The database content (files under `zigistry/database`) is licensed under the GNU Affero General Public License v3.0, 
+with the following additional condition:
+
+Any person or organization intending to use the database (in whole or in part) to create a public-facing website,
+application, or service must first obtain written permission from the copyright holder.
+
+Without such permission, reuse for online or networked services is prohibited.
+
+
                     GNU AFFERO GENERAL PUBLIC LICENSE
                        Version 3, 19 November 2007
 
