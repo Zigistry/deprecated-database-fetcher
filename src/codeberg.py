@@ -11,6 +11,7 @@ from libs.utils import (
     extract_repo_info,
 )
 
+
 def convert_codeberg_response_to_repo(codeberg_response: Dict) -> Repo:
     full_name = codeberg_response.get("full_name", "")
     zig_minimum_version = "unknown"
@@ -18,9 +19,10 @@ def convert_codeberg_response_to_repo(codeberg_response: Dict) -> Repo:
 
     base_url = "https://codeberg.org"
 
-    # Check for build.zig and build.zig.zon (using session)
     has_build_zig = file_exists_on_repo(base_url, full_name, "build.zig", "codeberg")
-    has_build_zig_zon = file_exists_on_repo(base_url, full_name, "build.zig.zon", "codeberg")
+    has_build_zig_zon = file_exists_on_repo(
+        base_url, full_name, "build.zig.zon", "codeberg"
+    )
 
     if has_build_zig_zon:
         try:
@@ -31,7 +33,7 @@ def convert_codeberg_response_to_repo(codeberg_response: Dict) -> Repo:
                 for dep in zon_metadata.get("dependencies", [])
             ]
         except Exception as e:
-            print(f"Error processing build.zig.zon for {full_name}: {e}")
+            print(f"Error processing zon for {full_name}: {e}")
 
     return Repo(
         avatar_url=codeberg_response.get("owner", {}).get("avatar_url"),
@@ -59,19 +61,18 @@ def convert_codeberg_response_to_repo(codeberg_response: Dict) -> Repo:
     )
 
 
-def fetch_all_codeberg_repos(query: str, topic_required: bool = True) -> List[Dict]:
+def fetch_all_codeberg_repos(query: str) -> List[Dict]:
     all_results = []
     page = 1
     session = requests.Session()
 
     while True:
-        url = f"https://codeberg.org/api/v1/repos/search?q={query}&page={page}"
-        if topic_required:
-            url += "&topic=true"
-
+        url = (
+            f"https://codeberg.org/api/v1/repos/search?q={query}&page={page}&topic=true"
+        )
         res = session.get(url, timeout=10)
         if res.status_code != 200:
-            print(f"Failed fetching page {page}, status {res.status_code}")
+            print(f"Failed page {page}, status {res.status_code}")
             break
 
         items = res.json().get("data", [])
@@ -100,45 +101,37 @@ def write_json(path: str, data):
         json.dump(data, f, indent=2)
 
 
-
 if __name__ == "__main__":
-    session = requests.Session()
+    print("Fetching all zig related repositories from Codeberg...")
+    raw_repos = fetch_all_codeberg_repos(query="zig") + fetch_all_codeberg_repos(
+        query="zig-package"
+    )
 
-    print("Fetching zig-package repositories...")
+    zig_package_repos = [r for r in raw_repos if "zig-package" in r.get("topics", [])]
+    zig_program_repos = [r for r in raw_repos if "zig" in r.get("topics", [])]
 
-    raw_repos = fetch_all_codeberg_repos(query="zig", topic_required=True)
+    for i in zig_package_repos:
+        print(i.get("full_name"))
 
-    zig_package_repos = [
-        r for r in raw_repos
-        if "zig-package" in r.get("topics", [])
+    converted_packages = [
+        convert_codeberg_response_to_repo(r) for r in zig_package_repos
+    ]
+    converted_programs = [
+        convert_codeberg_response_to_repo(r) for r in zig_program_repos
     ]
 
-    converted = [
-        convert_codeberg_response_to_repo(r)
-        for r in zig_package_repos
-    ]
-
+    # write packages.json
     with open("./database/packages.json", "r") as f:
         existing_packages = json.load(f)
 
-    final_packages = dedupe(existing_packages + [asdict(r) for r in converted])
+    final_packages = dedupe(existing_packages + [asdict(r) for r in converted_packages])
     write_json("./database/packages.json", final_packages)
+    print(f"Saved {len(final_packages)} entries → packages.json")
 
-    print(f"Saved {len(final_packages)} zig-package repos -> packages.json")
-
-    print("Fetching zig programs (general Zig repos)...")
-
-    raw_programs = fetch_all_codeberg_repos(query="zig", topic_required=True)
-
-    program_converted = [
-        convert_codeberg_response_to_repo(r)
-        for r in raw_programs
-    ]
-
+    # write programs.json
     with open("./database/programs.json", "r") as f:
         existing_programs = json.load(f)
 
-    final_programs = dedupe(existing_programs + [asdict(r) for r in program_converted])
+    final_programs = dedupe(existing_programs + [asdict(r) for r in converted_programs])
     write_json("./database/programs.json", final_programs)
-
-    print(f"Saved {len(final_programs)} zig repos -> programs.json")
+    print(f"Saved {len(final_programs)} entries → programs.json")
