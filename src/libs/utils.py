@@ -123,9 +123,9 @@ def url_template(
     if platform == "gitlab":
         return f"{base_url}/{repo_full_name}/-/raw/main/{filename}"  # GitLab-specific structure
     elif platform == "codeberg":
-        return f"{base_url}/{repo_full_name}/raw/branch/master/{filename}"  # Codeberg-specific structure
+        return f"{base_url}/{repo_full_name}/raw/branch/HEAD/{filename}"  # Codeberg-specific structure
     elif platform == "github":
-        return f"https://raw.githubusercontent.com/{repo_full_name}/master/{filename}"  # GitHub-specific structure
+        return f"https://raw.githubusercontent.com/{repo_full_name}/HEAD/{filename}"  # GitHub-specific structure
     else:
         raise ValueError(f"Unsupported platform: {platform}")
 

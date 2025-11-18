@@ -2,6 +2,7 @@ import json
 from typing import Dict, List
 from dataclasses import asdict
 import requests
+from libs.constants import POSSIBLE_README_FILENAMES
 
 from libs.types import Dependency, Repo
 from libs.z2j import get_repo_zon_metadata
@@ -9,6 +10,7 @@ from libs.utils import (
     file_exists_on_repo,
     process_dependency_url,
     extract_repo_info,
+    fetch_readme_content
 )
 
 def convert_codeberg_response_to_repo(codeberg_response: Dict) -> Repo:
@@ -32,6 +34,8 @@ def convert_codeberg_response_to_repo(codeberg_response: Dict) -> Repo:
             ]
         except Exception as e:
             print(f"Error processing build.zig.zon for {full_name}: {e}")
+    
+    readme_content = fetch_readme_content(base_url, full_name, POSSIBLE_README_FILENAMES, "codeberg")
 
     return Repo(
         avatar_url=codeberg_response.get("owner", {}).get("avatar_url"),
@@ -47,7 +51,7 @@ def convert_codeberg_response_to_repo(codeberg_response: Dict) -> Repo:
         has_build_zig_zon=has_build_zig_zon,
         license=codeberg_response.get("license", "-"),
         open_issues=codeberg_response.get("open_issues_count", 0),
-        readme_content="404",
+        readme_content=readme_content,
         repo_from="codeberg",
         size=codeberg_response.get("size", 0),
         stargazers_count=codeberg_response.get("stars_count", 0),

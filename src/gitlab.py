@@ -10,7 +10,7 @@ from libs.utils import (
     process_dependency_url,
     extract_repo_info,
 )
-
+from libs.constants import POSSIBLE_README_FILENAMES
 
 def convert_gitlab_response_to_repo(gitlab_response: Dict) -> Repo:
     """
@@ -61,7 +61,7 @@ def convert_gitlab_response_to_repo(gitlab_response: Dict) -> Repo:
             fetch_readme_content(
                 base_url,
                 path_with_namespace,
-                ["README.md", "readme.md", "ReadMe.md"],
+                POSSIBLE_README_FILENAMES,
                 "gitlab",
             )
             if readme_url
