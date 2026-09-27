@@ -1,0 +1,66 @@
+name: Run Python Scripts Hourly
+
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+jobs:
+  run-scripts:
+    runs-on: macos-latest
+    env:
+      GH_API_KEY: ${{ secrets.GH_API_KEY }}
+      HF_AUTH_TOKEN: ${{ secrets.HF_AUTH_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
+      - name: Install bun
+        run: |
+          curl -fsSL https://bun.sh/install | bash
+          echo "$(bun --version)"
+          echo 'export BUN_INSTALL="$HOME/.bun"' >> $GITHUB_ENV
+          echo 'export PATH="$BUN_INSTALL/bin:$PATH"' >> $GITHUB_ENV
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Run Python scripts and Bun script
+        run: |
+          python ./src/fetcherPackages.py
+          python ./src/fetcherPrograms.py
+          python ./src/removeDuplicates.py
+          python ./src/codeberg.py
+          python ./src/gitlab.py
+          python ./src/progamsSectionsFetcher.py
+          python ./src/removeDuplicates.py
+          export BUN_INSTALL="$HOME/.bun"
+          export PATH="$BUN_INSTALL/bin:$PATH"
+          bun i
+          bun run ./src/purifyAndMakeReadmeContentBetter.ts
+
+      - name: Add dependents
+        run: |
+          python ./src/dependents_adder.py
+          python ./src/indexSectionsFetcher.py
+
+      # - name: Create dataset and push to Hugging Face
+      #   run: |
+      #     python ./src/uploadDatasetToHuggingFace.py
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add .
+          git diff --quiet && git diff --staged --quiet || git commit -m "Automated update from GitHub Actions"
+          git push --no-verify
